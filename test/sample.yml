@@ -1,0 +1,25 @@
+# Input Parameters for ESA
+#-------------------------
+
+# Ensemble Information
+# 'type' options include 'wrf', 'mpas', and 'upp'
+# 'state_path' and 'resp_path' should include a {num} placeholder for ensemble member number
+# 'fix_file' is only required for MPAS ensembles
+ens:
+  type: 'wrf'
+  state_path: './tests/data/wrf/mem{num:03d}/wrfout.2009-04-15_20:45:00.TEST.nc'
+  resp_path: './tests/data/wrf/mem{num:03d}/wrfout.2009-04-15_22:00:00.TEST.nc'
+  fix_file: './tests/data/mpas/invariant_TEST.nc'
+  nmem: 3
+  verbose: 1
+  horiz_coord: 'xy'
+  vert_coord: 'idx'
+  state:
+    var: 'T2'
+    subset: False
+  response:
+    var: 'REFL_10CM'
+    reduction: 'max'
+    subset: True
+    xlim: [0, 100000]
+    ylim: [-50000, 50000]

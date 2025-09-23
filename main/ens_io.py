@@ -1,7 +1,7 @@
 """
-Functions for Cloud DA Ensemble I/O
+Functions for ESA Ensemble I/O
 
-All necessary unit conversions for ensemble data are also handled here
+The computation of the response function is also handled here
 
 shawn.s.murdzek@noaa.gov
 """
@@ -20,266 +20,291 @@ import numpy as np
 
 class ens_data():
     """
-    Class to handle ensemble output for cloud DA. Note that cloud fraction must be in %, not decimal.
+    Class to handle processed ensemble output
 
     Parameters
     ----------
     state : np.array
-        State matrix used for DA. Dimensions: (Nx, Nens)
-    varnames : np.array
-        Names of the forecast variables in state. Dimensions: (Nvars)
-    loc : dictionary
-        Location of forecast variables. Must include:
-            lat : Latitude in deg N. Dimensions: (N2d)
-            lon : Longitude in deg E and in range (-180, 180). Dimensions: (N2d)
-            hgt : Height AGL (m). Dimensions: (N2d, Nz)
-        Note: N2d * Nz * Nvars = Nx
-    other : dictionary, optional
-        Other fields that are not part of the state matrix. Might be needed for H(x). 
-        Key: field name. Value has dimensions (N2d * Nz, Nens)
-    meta : dictionary, optional
-        Metadata
+        Ensemble state at the initial time (i.e., the independent variable in the ESA regression). 
+        Dimensions: (Nx, Nens)
+    resp : np.array
+        Value of the response function for each ensemble member. Dimensions: (Nens)
+    x : np.array
+        X location for model fields. Dimensions: (Nx)
+    y : np.array
+        Y location for model fields. Dimensions: (Nx)
+    z : np.array
+        Z location for model fields. Dimensions: (Nx)
+    state_meta : dictionary, optional
+        Metadata for the ensemble state at the initial time
+    resp_meta : dictionary, optional
+        Metadata for the response function
 
     """
 
-    def __init__(self, state, varnames, loc, other={}, meta={}):
+    def __init__(self, state, resp, x, y, z, state_meta={}, resp_meta={}):
 
         self.state = state
-        self.varnames = varnames
-        self.loc = loc
-        self.other = other
-        self.meta = meta
+        self.resp = resp
+        self.x = x
+        self.y = y
+        self.z = z
+        self.state_meta = state_meta
+        self.resp_meta = resp_meta
 
-        # Determine number of forecast variables and ensemble members
-        self.meta['Nx'], self.meta['Nens'] = np.shape(state)
-
-        # Determine N2d and Nz
-        self.meta['N2d'], self.meta['Nz'] = np.shape(self.loc['hgt'])
-
-        # Save unique forecast variable names
-        self.meta['Nvars'] = len(varnames)
+        # Determine size of model state and number of ensemble members
+        self.Nx, self.Nens = np.shape(state)
     
 
-    def var_dict(self, n):
-        """
-        Return all variables (in state, loc, and other) as a dictionary for a single ensemble member
-
-        Parameters
-        ----------
-        n : integer
-            Ensemble member number (starting with 0)
-        
-        Returns
-        -------
-        dictionary
-            Model output as a dictionary
-
-        """
-        
-        out_dict = {}
-        N2d = self.meta['N2d']
-        Nz = self.meta['Nz']
-        N3d = N2d * Nz
-
-        # State variables
-        for i, v in enumerate(self.varnames):
-            out_dict[v] = np.reshape(self.state[(N3d*i):(N3d*(i+1)), n], newshape=(N2d, Nz))
-
-        # Locations
-        for key in self.loc.keys():
-            out_dict[key] = self.loc[key]
-
-        # Other variables
-        for key in self.other.keys():
-            out_dict[key] = np.reshape(self.other[key][:, n], newshape=(N2d, Nz))
-
-        return out_dict
-    
-
-    def write_mpas_out_for_DA(self, in_fnames, out_fnames):
-        """
-        Write ensemble output to an MPAS netCDF file
-
-        Parameters
-        ----------
-        in_fnames : list
-            List of input MPAS file names. Dimensions: (Nens)
-        out_fnames : list
-            List of output MPAS file names. Dimensions: (Nens)
-        
-        Returns
-        -------
-        None
-
-        """
-
-        for i, (in_f, out_f) in enumerate(zip(in_fnames, out_fnames)):
-            if (in_f == out_f):
-                ds = xr.open_dataset(in_f, mode='a')
-            else:
-                ds = xr.open_dataset(in_f)
-            model_dict = self.var_dict(i)
-            for v in self.varnames:
-                data = model_dict[v]
-                if v == 'cldfrac': data = data * 0.01
-                ds[v].values = np.expand_dims(data, axis=0)
-            if (in_f == out_f):
-                ds.to_netcdf(out_f, mode='a')
-            else:
-                ds.to_netcdf(out_f)
-    
-
-def read_parse_mpas(fnames, 
-                    fix_fname, 
-                    state_fields=['theta', 'qv', 'cldfrac'], 
-                    other_fields={}, 
-                    verbose=0):
-    """
-    Read and parse MPAS netCDF input
-
-    Parameters
-    ----------
-    fnames : list
-        NetCDF files containing MPAS atmospheric fields. Each entry is a different ensemble 
-        member
-    fix_fname : string
-        NetCDF file containing mesh information
-    state_fields : list, optional
-        Fields to include in the state matrix (must be 3D)
-    other_fields : dictionary, optional
-        Other fields to extract (can have any dimensions). Key is MPAS field name, value is the 
-        general name for the field
-    verbose : int, optional
-        Verbosity level
-
-    Returns
-    -------
-    ens_data object
-        Ensemble output
-
-    """
-
-    # Read in mesh info
-    if verbose > 0: print('  Reading MPAS mesh information')
-    fix_ds = xr.open_dataset(fix_fname)
-    loc = {'lat': np.rad2deg(fix_ds['latCell'].values),
-           'lon': np.rad2deg(fix_ds['lonCell'].values) - 360,
-           'hgt': (0.5*(fix_ds['zgrid'][:, 1:] + fix_ds['zgrid'][:, :-1]) - fix_ds['ter']).values}
-
-    # Read in ensemble data
-    if verbose > 0: print('  Reading MPAS mesh atmospheric information')
-    N3d = loc['hgt'].size
-    Nens = len(fnames)
-    state = np.zeros((N3d * len(state_fields), Nens))
-    other = {}
-    for key in other_fields.keys():
-        other[other_fields[key]] = []
-    for i, f in enumerate(fnames):
-        ds = xr.open_dataset(f)
-        idx = 0
-        for v in state_fields:
-            if v == 'cldfrac':
-                data = ds[v].values * 100
-            else:
-                data = ds[v].values
-            state[idx:(idx+N3d), i] = np.ravel(data)
-            idx = idx + N3d
-        for key in other_fields.keys():
-            other[other_fields[key]].append(np.ravel(ds[key].values))
-    
-    # Convert other output into arrays
-    for key in other_fields.keys():
-        name = other_fields[key]
-        other[name] = np.array(other[name]).T
-
-    return ens_data(state, state_fields, loc, other=other)
-
-
-def read_parse_upp(fnames, 
-                   state_fields=['TMP_P0_L105_GLC0', 'SPFH_P0_L105_GLC0', 'FRACCC_P0_L105_GLC0'], 
-                   other_fields={}, 
+def read_parse_wrf(state_fnames,
+                   resp_fnames,
+                   state_param,
+                   resp_param,
+                   horiz_coord='idx',
+                   vert_coord='idx',
                    verbose=0):
     """
-    Read and parse UPP GRIB2 input
+    Read and parse WRF netCDF input
 
     Parameters
     ----------
-    fnames : list
-        GRIB2 files containing UPP output. Each entry is a different ensemble member
-    state_fields : list, optional
-        Fields to include in the state matrix (must be 3D)
-    other_fields : dictionary, optional
-        Other fields to extract (can have any dimensions). Key is UPP field name, value is the 
-        general name for the field
+    state_fnames : list
+        NetCDF files containing WRF fields at the initial time. Each entry is a different ensemble 
+        member
+    resp_fnames : list
+        NetCDF files containing WRF fields at the response time. Each entry is a different ensemble 
+        member
+    state_param : dictionary
+        Dictionary of specifications for the ensemble state. 
+        Required keys: 'var' and 'subset'
+    resp_param : dictionary
+        Dictionary of specifications fo the ensemble response function.
+        Required keys: 'var', 'reduction', and 'subset'
+    horiz_coord : string
+        Horizontal coordinates options: 'idx', 'xy'
+    vert_coord : string
+        Horizontal coordinates options: 'idx'
     verbose : int, optional
         Verbosity level
 
     Returns
     -------
     ens_data object
-        Ensemble output
+        Ensemble output for ESA
 
     """
 
-    # Read in grid info
-    if verbose > 0: print('  Reading UPP grid information')
-    fix_ds = xr.open_dataset(fnames[0], engine='pynio')
-    shape_3d = fix_ds['HGT_P0_L105_GLC0'].shape
-    loc = {'lat': np.ravel(fix_ds['gridlat_0'].values),
-           'lon': np.ravel(fix_ds['gridlon_0'].values),
-           'hgt': np.reshape(fix_ds['HGT_P0_L105_GLC0'].values - 
-                             fix_ds['HGT_P0_L1_GLC0'].values[np.newaxis, :, :], 
-                             newshape=(shape_3d[1] * shape_3d[2], shape_3d[0]))}
+    check_read_parse_inputs(state_fnames, resp_fnames, state_param, resp_param)
 
-    # Read in ensemble data
-    if verbose > 0: print('  Reading UPP atmospheric information')
-    N3d = loc['hgt'].size
-    Nens = len(fnames)
-    state = np.zeros((N3d * len(state_fields), Nens))
-    other = {}
-    for key in other_fields.keys():
-        other[other_fields[key]] = []
-    for i, f in enumerate(fnames):
-        ds = xr.open_dataset(f, engine='pynio')
-        idx = 0
-        for v in state_fields:
-            state[idx:(idx+N3d), i] = np.ravel(ds[v].values)
-            idx = idx + N3d
-        for key in other_fields.keys():
-            other[other_fields[key]].append(np.ravel(ds[key].values))
+    # Read in ensemble state and response function
+    if verbose > 0: print('  Reading WRF information')
+    state_ls = []
+    resp = np.zeros(len(resp_fnames))
+    for i, (fnames, param) in enumerate(zip([resp_fnames, state_fnames], [resp_param, state_param])):
+        for j, f in enumerate(fnames):
+            ds = xr.open_dataset(f)
+            
+            # Read in entire field and remove time dimension. Field should be 2D or 3D
+            field = ds[param['var']].values[0, :]
+            field_meta = ds[param['var']].attrs
+            ndim = len(field.shape)
+                
+            # Determine length of each dimension
+            if ndim == 2:
+                ny, nx = field.shape
+            elif ndim == 3:
+                nz, ny, nx = field.shape
+            else:
+                raise ValueError(f"State field should be 2D or 3D (ndim = {ndim})")
+            
+            # Extract horizontal coordinates
+            if horiz_coord == 'idx':
+                x = np.arange(0, nx, dtype=int)
+                y = np.arange(0, ny, dtype=int)
+            elif horiz_coord == 'xy':
+                dx = ds.attrs['DX']
+                if nx == ds['west_east'].size:
+                    x = dx * ds['west_east'].values
+                    x = x - 0.5*x[-1]
+                elif nx == ds['west_east_stag'].size:
+                    x = dx * ds['west_east_stag'].values
+                    x = x - 0.5*(x[-1] + dx)
+                else:
+                    raise ValueError(f"nx ({nx}) does not match size of x coordinate")
+                dy = ds.attrs['DY']
+                if ny == ds['south_north'].size:
+                    y = dy * ds['south_north'].values
+                    y = y - 0.5*y[-1]
+                elif ny == ds['south_north_stag'].size:
+                    y = dy * ds['south_north_stag'].values
+                    y = y - 0.5*(y[-1] + dy)
+                else:
+                    raise ValueError(f"ny ({ny}) does not match size of y coordinate")
+            else:
+                raise ValueError(f"Invalid option for horiz_coord: {horiz_coord}")
+          
+            # Extract vertical coordinates
+            if ndim == 3:
+                if vert_coord == 'idx':
+                    z = np.arange(0, nz, dtype=int)
+                else:
+                    raise ValueError(f"Invalid option for vert_coord: {vert_coord}")
+            else:
+                z = np.zeros(1, dtype=int)
+               
+            # Perform subsetting
+            if param['subset']:     
+                xind = np.where(np.logical_and(x >= param['xlim'][0],
+                                               x <= param['xlim'][1]))[0]
+                yind = np.where(np.logical_and(y >= param['ylim'][0],
+                                               y <= param['ylim'][1]))[0]
+                x = x[xind]
+                y = y[yind]
+                if ndim == 2:
+                    field = field[yind, xind]
+                elif ndim == 3:
+                    zind = np.where(np.logical_and(z >= param['zlim'][0],
+                                                   z <= param['zlim'][1]))[0]
+                    z = z[zind]
+                    field = field[zind, yind, xind]
+            
+            # Perform reduction
+            if 'reduction' in param.keys():
+                resp[i] = reduce_field(field, reduction=param['reduction'])
+                resp_meta = field_meta
+            
+            # Turn state array and coordinates into 1D arrays
+            else:
+                y, z, x  = np.meshgrid(y, z, x)
+                x = np.ravel(x)
+                y = np.ravel(y)
+                z = np.ravel(z)
+                state_ls.append(np.ravel(field))
+                state_meta = field_meta
     
-    # Convert other output into arrays
-    for key in other_fields.keys():
-        name = other_fields[key]
-        other[name] = np.array(other[name]).T
+    # Convert state lists into an array
+    state = np.array(state_ls)
 
-    return ens_data(state, state_fields, loc, other=other)
+    return ens_data(state, resp, x, y, z, state_meta, resp_meta)
 
 
-def read_ens(fnames, 
-             state_fields=['theta', 'qv', 'cldfrac'], 
-             other_fields={}, 
+def reduce_field(field, reduction='max', kw={}):
+    """
+    Reduce a 2D or 3D field into a single value
+
+    Parameters
+    ----------
+    field : np.array
+        Model field
+    reduction : string, optional
+        Reduction method. The default is 'max'.
+    kw : dictionary, optional
+        Additional keyword arguments used for the reduction
+
+    Returns
+    -------
+    val : float
+        Result of reduction
+
+    """
+    
+    if reduction == 'max':
+        val = np.amax(field)
+    elif reduction == 'min':
+        val = np.amin(field)
+    elif reduction == 'mean':
+        val = np.mean(reduction)
+    elif reduction == 'sum':
+        val = np.sum(field)
+    elif reduction == 'npts_gt_thres':
+        val = np.sum(field > kw['thres'])
+    elif reduction == 'npts_lt_thres':
+        val = np.sum(field < kw['thres'])
+    
+    return val
+
+
+def check_read_parse_inputs(state_fnames, resp_fnames, state_param, resp_param):
+    """
+    Check inputs for the various read_parse functions in this file
+    
+    Parameters
+    ----------
+    state_fnames : list
+        NetCDF files containing WRF fields at the initial time. Each entry is a different ensemble 
+        member
+    resp_fnames : list
+        NetCDF files containing WRF fields at the response time. Each entry is a different ensemble 
+        member
+    state_param : dictionary
+        Dictionary of specifications for the ensemble state. 
+        Required keys: 'var' and 'subset'
+    resp_param : dictionary
+        Dictionary of specifications fo the ensemble response function.
+        Required keys: 'var', 'reduction', and 'subset'
+    
+    Returns
+    -------
+    None
+    
+    """
+    
+    # Check that both ensemble sizes are the same
+    if len(state_fnames) != len(resp_fnames):
+        print('In main.ens_io.read_parse_wrf')
+        print(f"length of state_fnames = {len(state_fnames)}")
+        print(f"length of resp_fnames = {len(resp_fnames)}")
+        raise ValueError("state_fnames and resp_fnames must have the same size.")
+    
+    # Check that the param dictionaries have the required keys
+    req_key_state_param = ['var', 'subset']
+    req_key_resp_param = ['var', 'reduction', 'subset']
+    for k in req_key_state_param:
+        if k not in state_param.keys():
+            raise ValueError(f"Key {k} is missing from state_param")
+    for k in req_key_resp_param:
+        if k not in resp_param.keys():
+            raise ValueError(f"Key {k} is missing from resp_param")
+            
+    return None
+
+
+def read_ens(state_fnames, 
+             resp_fnames,
+             state_param,
+             resp_param,
+             horiz_coord='idx',
+             vert_coord='idx',
              verbose=0, 
              fix_fname=None, 
-             ftype='mpas'):
+             ftype='wrf'):
     """
     Read ensemble output
 
     Parameters
     ----------
-    fnames : list
-        Ensemble member file names
-    state_fields : list, optional
-        Fields to include in the state matrix (must be 3D)
-    other_fields : dictionary, optional
-        Other fields to extract (can have any dimensions). Key is field name, value is the 
-        general name for the field
+    state_fnames : list
+        Files containing model fields at the initial time. Each entry is a different ensemble 
+        member
+    resp_fnames : list
+        Files containing model fields at the response time. Each entry is a different ensemble 
+        member
+    state_param : dictionary
+        Dictionary of specifications for the ensemble state. 
+        Required keys: 'var' and 'subset'
+    resp_param : dictionary
+        Dictionary of specifications fo the ensemble response function.
+        Required keys: 'var', 'reduction', and 'subset'
+    horiz_coord : string, optional
+        Horizontal coordinates options
+    vert_coord : string, optional
+        Horizontal coordinates options
     verbose : int, optional
         Verbosity level
     fix_fname : string, optional
         File containing grid or mesh information. Only needed for MPAS output
     ftype : string, optional
-        Input file type. Options: 'mpas' or 'upp'
+        Input file type. Options: 'wrf'
     
     Returns
     -------
@@ -288,17 +313,14 @@ def read_ens(fnames,
 
     """
 
-    if ftype == 'mpas':
-        ens_obj = read_parse_mpas(fnames, 
-                                  fix_fname, 
-                                  state_fields=state_fields, 
-                                  other_fields=other_fields,
-                                  verbose=verbose)
-    elif ftype == 'upp':
-        ens_obj = read_parse_upp(fnames,
-                                 state_fields=state_fields, 
-                                 other_fields=other_fields,
-                                 verbose=verbose)
+    if ftype == 'wrf':
+        ens_obj = read_parse_wrf(state_fnames,
+                                 resp_fnames,
+                                 state_param,
+                                 resp_param,
+                                 horiz_coord='idx',
+                                 vert_coord='idx',
+                                 verbose=0)
     else:
         raise ValueError(f"ftype {ftype} is not recognized")
 
