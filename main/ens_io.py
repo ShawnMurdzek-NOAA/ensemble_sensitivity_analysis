@@ -26,7 +26,7 @@ class ens_data():
     ----------
     state : np.array
         Ensemble state at the initial time (i.e., the independent variable in the ESA regression). 
-        Dimensions: (Nx, Nens)
+        Dimensions: (Nens, Nx)
     resp : np.array
         Value of the response function for each ensemble member. Dimensions: (Nens)
     x : np.array
@@ -53,7 +53,7 @@ class ens_data():
         self.resp_meta = resp_meta
 
         # Determine size of model state and number of ensemble members
-        self.Nx, self.Nens = np.shape(state)
+        self.Nens, self.Nx = np.shape(state)
     
 
 def read_parse_wrf(state_fnames,
@@ -153,25 +153,32 @@ def read_parse_wrf(state_fnames,
                 z = np.zeros(1, dtype=int)
                
             # Perform subsetting
-            if param['subset']:     
-                xind = np.where(np.logical_and(x >= param['xlim'][0],
-                                               x <= param['xlim'][1]))[0]
-                yind = np.where(np.logical_and(y >= param['ylim'][0],
-                                               y <= param['ylim'][1]))[0]
-                x = x[xind]
-                y = y[yind]
-                if ndim == 2:
-                    field = field[yind, xind]
-                elif ndim == 3:
+            # Do vertical subsetting first, then horizontal subsetting
+            if param['subset']:
+                if ndim == 3:
                     zind = np.where(np.logical_and(z >= param['zlim'][0],
                                                    z <= param['zlim'][1]))[0]
                     z = z[zind]
-                    field = field[zind, yind, xind]
+                    field = field[zind[0]:zind[-1]+1, :]
+                if horiz_coord in ['idx', 'xy']:
+                    xind = np.where(np.logical_and(x >= param['xlim'][0],
+                                                   x <= param['xlim'][1]))[0]
+                    yind = np.where(np.logical_and(y >= param['ylim'][0],
+                                                   y <= param['ylim'][1]))[0]
+                    x = x[xind]
+                    y = y[yind]
+                    if ndim == 2:
+                        field = field[yind[0]:yind[-1]+1, xind[0]:xind[-1]+1]
+                    elif ndim == 3:
+                        field = field[:, yind[0]:yind[-1]+1, xind[0]:xind[-1]+1]
+                else:
+                    raise ValueError(f"Cannot perform subsetting with horiz_coord {horiz_coord}")
             
             # Perform reduction
             if 'reduction' in param.keys():
-                resp[i] = reduce_field(field, reduction=param['reduction'])
+                resp[j] = reduce_field(field, reduction=param['reduction'])
                 resp_meta = field_meta
+                resp_meta['reduction'] = param['reduction']
             
             # Turn state array and coordinates into 1D arrays
             else:
@@ -213,7 +220,7 @@ def reduce_field(field, reduction='max', kw={}):
     elif reduction == 'min':
         val = np.amin(field)
     elif reduction == 'mean':
-        val = np.mean(reduction)
+        val = np.mean(field)
     elif reduction == 'sum':
         val = np.sum(field)
     elif reduction == 'npts_gt_thres':

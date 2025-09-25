@@ -17,7 +17,6 @@ sys.path.append(path)
 import pytest
 import xarray as xr
 import numpy as np
-import copy
 
 from main import ens_io
 
@@ -26,186 +25,131 @@ from main import ens_io
 # Contents
 #---------------------------------------------------------------------------------------------------
 
-class TestEnsMPASIO():
+class TestGeneral():
+    
+    def test_reduce_field(self):
+        """
+        Test various field reduction methods
+        """
+        
+        x = np.random.random((30, 40))
+        
+        def gt(x):
+            return np.sum(x > 0.5)
+        
+        def lt(x):
+            return np.sum(x < 0.5)
+        
+        for s, f in zip(['max', 'min', 'mean', 'sum', 'npts_gt_thres', 'npts_lt_thres'], 
+                        [np.amax, np.amin, np.mean, np.sum, gt, lt]):
+            val = ens_io.reduce_field(x, reduction=s, kw={'thres':0.5})
+            assert not hasattr(val, "__len__")  # Ensure that val is a scalar
+            assert np.isclose(val, f(x))
+        
+
+class TestEnsWRFIO():
 
     @pytest.fixture(scope='class')
-    def sample(self):
-        fnames = [f'./sample_data/mpas/mem00{n}/mpasout.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-        state_fields = ['theta', 'qv', 'cldfrac']
-        other_fields = {'qc' : 'cld_mass_mix'}
-        fix_fname = './sample_data/mpas/invariant_TEST.nc'
-        ftype = 'mpas'
-        return ens_io.read_ens(fnames, 
-                           state_fields=state_fields,
-                           other_fields=other_fields,
-                           fix_fname=fix_fname,
-                           ftype=ftype)
-
-
-    def test_ens_contents(self, sample):
-        """
-        Check that MPAS ens_data() object has expected contents in the expected order
-        """
-
-        # Read in mesh info for comparison
-        ds_info = xr.open_dataset('./sample_data/mpas/invariant_TEST.nc')
-
-        # Check array dimensions
-        assert sample.meta['Nens'] == 3
-        assert sample.meta['N2d'] == ds_info['zgrid'].shape[0]
-        assert sample.meta['Nz'] == (ds_info['zgrid'].shape[1] - 1)
-        assert sample.meta['Nvars'] == 3
-        assert sample.meta['Nx'] == sample.meta['N2d'] * sample.meta['Nz'] * sample.meta['Nvars']
+    def sample_fnames(self):
+        state_fnames = [f"./data/wrf/mem00{n}/wrfout.2009-04-15_20:45:00.TEST.nc" for n in range(1, 4)]
+        resp_fnames = [f"./data/wrf/mem00{n}/wrfout.2009-04-15_22:00:00.TEST.nc" for n in range(1, 4)]
+        return state_fnames, resp_fnames
     
-
-    def test_var_dict(self, sample):
-        """
-        Test the .var_dict() method using MPAS netCDF output
-        """
-        sample = copy.deepcopy(sample)
-
-        # Read in mesh info and netCDF output for a single member
-        ds_info = xr.open_dataset('./sample_data/mpas/invariant_TEST.nc')
-        ds = xr.open_dataset('./sample_data/mpas/mem001/mpasout.2024-05-27_04.00.00.TEST.nc')
-
-        # Call method
-        model_dict = sample.var_dict(0)
-
-        # Check that atmospheric fields match
-        # Account for fact that ens_io uses % for cloud fraction, whereas raw MPAS output uses decimal
-        for f_origin, f_new, scale in zip(['theta', 'qv', 'cldfrac', 'qc'],
-                                          ['theta', 'qv', 'cldfrac', 'cld_mass_mix'],
-                                          [1, 1, 100, 1]):
-            assert np.all(np.isclose(ds[f_origin].values * scale, model_dict[f_new]))
     
-
-    def test_write_mpas_out_for_DA(self, sample):
+    def test_plain_read(self, sample_fnames):
         """
-        Test the .write_mpas_out_for_DA() method using MPAS netCDF output, with output set to 0
+        Test a basic ensemble read with no subsetting and horiz_coord and vert_coord set to 'idx'
         """
-        sample = copy.deepcopy(sample)
-        in_fnames = [f'./sample_data/mpas/mem00{n}/mpasout.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-        out_fnames = [f'./sample_data/mpas/mem00{n}/mpasout.DA.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-
-        # Make some changes to data, then call method
-        sample.state = np.zeros(sample.state.shape)
-        sample.write_mpas_out_for_DA(in_fnames, out_fnames)
-
-        # Check to make sure output files exist
-        for f in out_fnames:
-            assert os.path.isfile(f)
-
-        # Check output from a sample file
-        ds_out = xr.open_dataset(out_fnames[0])
-        assert np.all(np.isclose(ds_out['theta'].values, 0))
         
-        # Clean up
-        for f in out_fnames:
-            os.remove(f)
-
-
-    def test_write_mpas_out_for_DA_append(self, sample):
-        """
-        Test the .write_mpas_out_for_DA() method using MPAS netCDF output, with output set to 0
-
-        This test appends to the original file rather than creating a new file
-        """
-        sample = copy.deepcopy(sample)
-        in_fnames = [f'./sample_data/mpas/mem00{n}/mpasout.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-        out_fnames = [f'./sample_data/mpas/mem00{n}/mpasout.DA.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-
-        # Copy in_fnames to out_fnames so we don't overwrite our test data
-        for in_f, out_f in zip(in_fnames, out_fnames):
-            os.system(f"cp {in_f} {out_f}")
-
-        # Check to make sure output files exist
-        for f in out_fnames:
-            assert os.path.isfile(f)
-
-        # Make some changes to data, then call method
-        sample.state = np.zeros(sample.state.shape)
-        sample.write_mpas_out_for_DA(out_fnames, out_fnames)
-
-        # Check output from a sample file
-        ds_out = xr.open_dataset(out_fnames[0])
-        assert np.all(np.isclose(ds_out['theta'].values, 0))
+        state_param = {'var':'T2', 'subset':False}
+        resp_param = {'var':'PSFC', 'subset':False, 'reduction':'max'}
         
-        # Clean up
-        for f in out_fnames:
-            os.remove(f)
-
-
-    def test_write_mpas_out_for_DA_no_change(self, sample):
-        """
-        Test the .write_mpas_out_for_DA() method using MPAS netCDF output, but don't alter data
-
-        Test may fail if unit conversions for cldfrac are not handled properly 
-        (MPAS output uses decimals, but cloud DA code uses %)
-        """
-        sample = copy.deepcopy(sample)
-        in_fnames = [f'./sample_data/mpas/mem00{n}/mpasout.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-        out_fnames = [f'./sample_data/mpas/mem00{n}/mpasout.DA.2024-05-27_04.00.00.TEST.nc' for n in range(1, 4)]
-
-        # Call method
-        sample.write_mpas_out_for_DA(in_fnames, out_fnames)
-
-        # Check output from a sample file
-        ds_in = xr.open_dataset(in_fnames[0])
-        ds_out = xr.open_dataset(out_fnames[0])
-        assert np.all(np.isclose(ds_in['cldfrac'].values, ds_out['cldfrac'].values))
+        ens_obj = ens_io.read_parse_wrf(sample_fnames[0],
+                                        sample_fnames[1],
+                                        state_param,
+                                        resp_param,
+                                        horiz_coord='idx',
+                                        vert_coord='idx',
+                                        verbose=0)
         
-        # Clean up
-        for f in out_fnames:
-            os.remove(f)
-
-
-class TestEnsUPPIO():
-
-    @pytest.fixture(scope='class')
-    def sample(self):
-        fnames = [f'./sample_data/upp/mem00{n}/rrfs.t03z.natlev.TEST.f001.conus.grib2' for n in range(1, 4)]
-        state_fields = ['TMP_P0_L105_GLC0', 'SPFH_P0_L105_GLC0', 'FRACCC_P0_L105_GLC0']
-        other_fields = {'TKE_P0_L105_GLC0' : 'TKE'}
-        ftype = 'upp'
-        return ens_io.read_ens(fnames, 
-                               state_fields=state_fields,
-                               other_fields=other_fields,
-                               ftype=ftype)
+        # Compare to ensemble members opened using xarray
+        state_ds1 = xr.open_dataset(sample_fnames[0][0])
+        resp_ds1 = xr.open_dataset(sample_fnames[1][0])
+        
+        # Check state array and response function value
+        assert np.all(np.isclose(np.ravel(state_ds1[state_param['var']][0, :].values), 
+                                 ens_obj.state[0]))
+        assert np.isclose(np.amax(resp_ds1[resp_param['var']].values), 
+                                  ens_obj.resp[0])
+        
+        # Check coordinates
+        for coord, name in zip([ens_obj.x, ens_obj.y],
+                               ['west_east', 'south_north']):
+            assert len(coord.shape) == 1
+            assert coord.size == ens_obj.Nx
+            assert coord.min() == 0
+            assert coord.max() == np.amax(state_ds1[name].values)
+        
+        # Check other attributes
+        assert ens_obj.Nens == len(sample_fnames[0])
+        assert ens_obj.resp_meta['reduction'] == resp_param['reduction']
+        
+        
+    def test_read_ens_wrapper(self, sample_fnames):
+        """
+        Test the read_ens wrapper
+        """
+        
+        state_param = {'var':'T2', 'subset':False}
+        resp_param = {'var':'PSFC', 'subset':False, 'reduction':'max'}
+        
+        ens_obj = ens_io.read_parse_wrf(sample_fnames[0],
+                                        sample_fnames[1],
+                                        state_param,
+                                        resp_param,
+                                        horiz_coord='idx',
+                                        vert_coord='idx',
+                                        verbose=0)
+        
+        # Compare to read_ens wrapper
+        ens_obj2 = ens_io.read_ens(sample_fnames[0],
+                                   sample_fnames[1],
+                                   state_param,
+                                   resp_param,
+                                   horiz_coord='idx',
+                                   vert_coord='idx',
+                                   verbose=0,
+                                   ftype='wrf')
+        
+        for i in range(len(ens_obj.state)):
+            assert np.all(np.isclose(ens_obj.state[i], ens_obj2.state[i]))
+            assert np.isclose(ens_obj.resp[i], ens_obj2.resp[i])
+            
     
-
-    def test_ens_contents(self, sample):
+    def test_horiz_coord_xy(self, sample_fnames):
         """
-        Check that UPP ens_data() object has expected contents in the expected order
+        Test a ensemble read with horiz_coord set to 'xy'
         """
-
-        # Read a single ensemble member for comparison
-        ds = xr.open_dataset('./sample_data/upp/mem001/rrfs.t03z.natlev.TEST.f001.conus.grib2', engine='pynio')
-
-        # Check array dimensions
-        assert sample.meta['Nens'] == 3
-        assert sample.meta['N2d'] == ds['gridlon_0'].size        
-        assert sample.meta['Nz'] == ds['HGT_P0_L105_GLC0'].shape[0]
-        assert sample.meta['Nvars'] == 3
-        assert sample.meta['Nx'] == sample.meta['N2d'] * sample.meta['Nz'] * sample.meta['Nvars']
-    
-
-    def test_var_dict(self, sample):
-        """
-        Test the .var_dict() method using UPP GRIB2 output
-        """
-
-        # Read a single ensemble member for comparison
-        ds = xr.open_dataset('./sample_data/upp/mem001/rrfs.t03z.natlev.TEST.f001.conus.grib2', engine='pynio')
-        shape = ds['TMP_P0_L105_GLC0'].shape
-
-        # Call method
-        model_dict = sample.var_dict(0)
-
-        # Check that atmospheric fields match
-        for f_origin, f_new in zip(['TMP_P0_L105_GLC0', 'SPFH_P0_L105_GLC0', 'FRACCC_P0_L105_GLC0', 'TKE_P0_L105_GLC0'],
-                                   ['TMP_P0_L105_GLC0', 'SPFH_P0_L105_GLC0', 'FRACCC_P0_L105_GLC0', 'TKE']):
-            assert np.all(np.isclose(np.reshape(ds[f_origin].values, newshape=(shape[1]*shape[2], shape[0])), 
-                                     model_dict[f_new]))
+        
+        state_param = {'var':'T2', 'subset':False}
+        resp_param = {'var':'PSFC', 'subset':False, 'reduction':'max'}
+        
+        ens_obj = ens_io.read_parse_wrf(sample_fnames[0],
+                                        sample_fnames[1],
+                                        state_param,
+                                        resp_param,
+                                        horiz_coord='xy',
+                                        vert_coord='idx',
+                                        verbose=0)
+        
+        state_ds = xr.open_dataset(sample_fnames[0][0])
+        xmax = (state_ds['west_east'].size - 1) * state_ds.attrs['DX'] / 2
+        ymax = (state_ds['south_north'].size - 1) * state_ds.attrs['DX'] / 2
+        assert ens_obj.x.max() == xmax
+        assert ens_obj.x.min() == -xmax
+        assert ens_obj.y.max() == ymax
+        assert ens_obj.y.min() == -ymax
+        
     
 
 """

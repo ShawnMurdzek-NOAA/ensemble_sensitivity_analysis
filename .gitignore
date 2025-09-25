@@ -2,3 +2,5 @@
 # Ignore swp files
 *.swp
 
+# Ignore __pycache__
+__pycache__/
