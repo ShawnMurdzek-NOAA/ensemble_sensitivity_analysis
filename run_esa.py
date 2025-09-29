@@ -93,6 +93,13 @@ if __name__ == '__main__':
     # Read ensemble data
     print('\nReading ensemble data')
     ens_obj = read_ensemble(param)
+    
+    # Compute ESA
+    print('Computing ESA')
+    ens_obj.compute_esa()
+    if param['var_diff']['use']:
+        print('Computing variance difference')
+        ens_obj.compute_variance_diff(param['var_diff']['ob_var'])
 
     print(f'\ntotal elapsed time = {(dt.datetime.now() - start).total_seconds()} s')
 

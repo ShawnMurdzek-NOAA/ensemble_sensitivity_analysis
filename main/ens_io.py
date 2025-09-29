@@ -13,49 +13,13 @@ shawn.s.murdzek@noaa.gov
 import xarray as xr
 import numpy as np
 
+from main.esa import ens_data
+
 
 #---------------------------------------------------------------------------------------------------
 # Contents
 #---------------------------------------------------------------------------------------------------
-
-class ens_data():
-    """
-    Class to handle processed ensemble output
-
-    Parameters
-    ----------
-    state : np.array
-        Ensemble state at the initial time (i.e., the independent variable in the ESA regression). 
-        Dimensions: (Nens, Nx)
-    resp : np.array
-        Value of the response function for each ensemble member. Dimensions: (Nens)
-    x : np.array
-        X location for model fields. Dimensions: (Nx)
-    y : np.array
-        Y location for model fields. Dimensions: (Nx)
-    z : np.array
-        Z location for model fields. Dimensions: (Nx)
-    state_meta : dictionary, optional
-        Metadata for the ensemble state at the initial time
-    resp_meta : dictionary, optional
-        Metadata for the response function
-
-    """
-
-    def __init__(self, state, resp, x, y, z, state_meta={}, resp_meta={}):
-
-        self.state = state
-        self.resp = resp
-        self.x = x
-        self.y = y
-        self.z = z
-        self.state_meta = state_meta
-        self.resp_meta = resp_meta
-
-        # Determine size of model state and number of ensemble members
-        self.Nens, self.Nx = np.shape(state)
     
-
 def read_parse_wrf(state_fnames,
                    resp_fnames,
                    state_param,

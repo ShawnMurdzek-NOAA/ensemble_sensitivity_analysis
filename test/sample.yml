@@ -24,3 +24,9 @@ ens:
     xlim: [0, 100000]
     ylim: [-50000, 50000]
     zlim: [0, 50]
+
+# Option to compute the estimated variance difference of the response function from assimilating
+# an observation with variance ob_var (units of ob_var should match model state)
+var_diff:
+  use: True
+  ob_var: 1
