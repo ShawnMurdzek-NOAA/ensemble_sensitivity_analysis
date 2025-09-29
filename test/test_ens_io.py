@@ -149,8 +149,44 @@ class TestEnsWRFIO():
         assert ens_obj.x.min() == -xmax
         assert ens_obj.y.max() == ymax
         assert ens_obj.y.min() == -ymax
-        
     
+    
+    def test_subset_idx(self, sample_fnames):
+        """
+        Test subsetting feature when vert_coord and horiz_coord are 'idx'
+        """
+        
+        state_param = {'var':'T', 'subset':True,
+                       'xlim':[10, 30], 'ylim':[5, 30], 'zlim':[5, 7]}
+        resp_param = {'var':'PSFC', 'subset':True, 'reduction':'max',
+                      'xlim':[20, 40], 'ylim':[15, 35]}
+        
+        ens_obj = ens_io.read_parse_wrf(sample_fnames[0],
+                                        sample_fnames[1],
+                                        state_param,
+                                        resp_param,
+                                        horiz_coord='idx',
+                                        vert_coord='idx',
+                                        verbose=0)
+        
+        # Compare to ensemble members opened using xarray
+        state_ds = xr.open_dataset(sample_fnames[0][0])
+        state_T = state_ds['T'][0,
+                                state_param['zlim'][0]:(state_param['zlim'][-1]+1),
+                                state_param['ylim'][0]:(state_param['ylim'][-1]+1),
+                                state_param['xlim'][0]:(state_param['xlim'][-1]+1)].values
+        state_T = np.ravel(state_T)
+        
+        resp_ds = xr.open_dataset(sample_fnames[1][0])
+        resp = resp_ds['PSFC'][0,
+                               resp_param['ylim'][0]:resp_param['ylim'][-1],
+                               resp_param['xlim'][0]:resp_param['xlim'][-1]].values
+        resp = np.amax(resp)
+        
+        assert len(state_T) == ens_obj.Nx
+        assert np.all(np.isclose(state_T, ens_obj.state[0, :]))
+        assert np.isclose(resp, ens_obj.resp[0])
+        
 
 """
 End test_ens_io.py
