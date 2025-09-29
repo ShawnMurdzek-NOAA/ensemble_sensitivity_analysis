@@ -76,8 +76,10 @@ def read_parse_wrf(state_fnames,
             # Determine length of each dimension
             if ndim == 2:
                 ny, nx = field.shape
+                full_shape = (1, ny, nx)
             elif ndim == 3:
                 nz, ny, nx = field.shape
+                full_shape = (nz, ny, nx)
             else:
                 raise ValueError(f"State field should be 2D or 3D (ndim = {ndim})")
             
@@ -156,7 +158,7 @@ def read_parse_wrf(state_fnames,
     # Convert state lists into an array
     state = np.array(state_ls)
 
-    return ens_data(state, resp, x, y, z, state_meta, resp_meta)
+    return ens_data(state, resp, x, y, z, full_shape=full_shape, state_meta=state_meta, resp_meta=resp_meta)
 
 
 def reduce_field(field, reduction='max', kw={}):
@@ -289,9 +291,9 @@ def read_ens(state_fnames,
                                  resp_fnames,
                                  state_param,
                                  resp_param,
-                                 horiz_coord='idx',
-                                 vert_coord='idx',
-                                 verbose=0)
+                                 horiz_coord=horiz_coord,
+                                 vert_coord=vert_coord,
+                                 verbose=verbose)
     else:
         raise ValueError(f"ftype {ftype} is not recognized")
 

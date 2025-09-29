@@ -79,7 +79,7 @@ class TestESA():
         
         assert hasattr(ens_obj, 'var_diff')
         assert len(ens_obj.var_diff) == ens_obj.Nx
-
+        
 
 """
 End test_esa.py

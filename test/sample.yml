@@ -30,3 +30,7 @@ ens:
 var_diff:
   use: True
   ob_var: 1
+
+# Output options
+out:
+  nc_fname: test.nc
