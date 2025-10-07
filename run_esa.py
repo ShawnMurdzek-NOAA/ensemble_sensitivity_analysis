@@ -102,16 +102,18 @@ def save_output(ens_obj, param):
     ens_obj.save_to_netcdf(param['out']['nc_fname'], attrs=attrs)
 
 
-def print_max(ens_obj, fields=None):
+def print_min_max(ens_obj, max_fields=None, min_fields=None):
     """
-    Print location of max ESA values
+    Print location of max or min values for various fields
 
     Parameters
     ----------
     ens_obj : esa.ens_data object
-        DESCRIPTION.
-    fields : list or None, optional
-        List of fields to find the max of. If None, all fields are used
+        Ensemble data with ESA fields
+    max_fields : list or None, optional
+        List of fields to find the max of. If None, a default list of fields are used
+    min_fields : list or None, optional
+        List of fields to find the min of. If None, a default list of field are used
 
     Returns
     -------
@@ -119,31 +121,39 @@ def print_max(ens_obj, fields=None):
 
     """
     
-    # Populate fields if None
-    if fields is None:
-        fields = []
-        all_fields = ['esa', 'var_diff']
-        for f in all_fields:
-            if hasattr(ens_obj, f):
-                fields.append(f)
+    # Default fields
+    default_max = ['esa', 'var_diff']
+    default_min = ['pval']
     
-    # Create a second fields list
-    fields2 = copy.deepcopy(fields)
-    additional_fields2 = ['pval']
-    for f in additional_fields2:
-        if hasattr(ens_obj, f) and (f not in fields2):
-            fields2.append(f)
+    # Populate stat and all_fields lists
+    stat = []
+    all_fields = []
+    for s, flist, default in zip(['max', 'min'], 
+                                 [max_fields, min_fields], 
+                                 [default_max, default_min]):
+        if flist is None:
+            for f in default:
+                if hasattr(ens_obj, f):
+                    all_fields.append(f)
+                    stat.append(s)
+        else:
+            all_fields = all_fields + flist
+            stat = stat + [s] * len(flist)
+
     
-    # Print location of maxima
+    # Print location of minima and maxima
     print()
     print(40*'-')
-    for f in fields:
-        idx = np.argmax(np.abs(getattr(ens_obj, f)))
-        print(f"Abs max {f} location: x = {ens_obj.x[idx]}, y = {ens_obj.y[idx]}, z = {ens_obj.z[idx]}")
-        s = ''
-        for f in fields2:
-            s = s + f"{f} = {getattr(ens_obj, f)[idx]:.3e} "
-        print(s)
+    for s, f in zip(stat, all_fields):
+        if s == 'max':
+            idx = np.argmax(np.abs(getattr(ens_obj, f)))
+        elif s == 'min':
+            idx = np.argmin(np.abs(getattr(ens_obj, f)))
+        print(f"Abs {s} {f} location: x = {ens_obj.x[idx]}, y = {ens_obj.y[idx]}, z = {ens_obj.z[idx]}")
+        out = ''
+        for f in all_fields:
+            out = out + f"{f} = {getattr(ens_obj, f)[idx]:.3e} "
+        print(out)
         print()
         
 
@@ -176,8 +186,8 @@ if __name__ == '__main__':
     print('Saving output')
     save_output(ens_obj, param)
     
-    # Print max values
-    print_max(ens_obj)
+    # Print min and max values
+    print_min_max(ens_obj)
 
     print(f'\ntotal elapsed time = {(dt.datetime.now() - start).total_seconds()} s')
 
