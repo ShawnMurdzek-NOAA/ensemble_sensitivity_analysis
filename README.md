@@ -4,9 +4,7 @@ Program for running Ensemble Sensitivity Analysis (ESA) in Python.
 
 ## Contents
 
-- `main/`: Main code for the direct ceilometer cloud DA program.
-- `misc/`: Miscellaneous scripts. Most relate to plotting.
-- `pyDA_utils/`: Submodule. Source code can be found here at [pyDA_utils](https://github.com/ShawnMurdzek-NOAA/pyDA_utils/tree/main)
+- `main/`: Main code for computing ESA.
 - `tests/`: Automated unit tests as well as a simple test case.
 
 ## Quick Start Guide
