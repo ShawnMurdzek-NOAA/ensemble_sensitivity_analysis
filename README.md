@@ -32,6 +32,10 @@ This test case uses the following inputs:
 If the program runs successfully, the following files will be created:
 - `test.nc`: ESA output file
 
+## ESA Overview
+
+ESA is the linear regression slope between an a single model cell and variable at one time (i.e., the predictor or "state") to some response function derived from the model at a later time (i.e., the predictand or "response"). The ensemble provides multiple samples of the state and response, which allows for the computation of linear regression. In this program, the state consists of a 2D or 3D field with many model cells (e.g., 2-m temperature), whereas the response will be a single value for each ensemble (e.g., max reflectivity). The linear regression slope is computed separately for each model cell, resulting in a 2D or 3D field of regression slopes. This array of regression slopes is referred to as `esa` in the netCDF file produced by the program.
+
 ## References
 
 - [Ancell and Hakim (2007)](https://doi.org/10.1175/2007MWR1904.1)
