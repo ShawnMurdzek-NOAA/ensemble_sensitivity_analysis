@@ -5,6 +5,7 @@ Program for running Ensemble Sensitivity Analysis (ESA) in Python.
 ## Contents
 
 - `main/`: Main code for computing ESA.
+- `util/`: Utilities that are separate from the ESA program (e.g., plotting scripts).
 - `tests/`: Automated unit tests as well as a simple test case.
 
 ## Quick Start Guide
