@@ -35,10 +35,11 @@ If the program runs successfully, the following files will be created:
 
 ## Utility Programs
 
-The `./util/` directory contains a number of independent programs that may be helpful for probing output from the main ESA program (`run_esa.py`). These include:
+The `./util/` directory contains a number of independent programs that may be helpful for either preprocessing input or probing output from the main ESA program (`run_esa.py`). These include:
 
-- `plot_esa_fields.py`: Create 2D horizontal cross sections of fields output from the ESA program.
+- `add_uh_to_wrfout.py`: Script to add updraft helicity to a wrfout netCDF file. This script must be run prior to `run_esa.py` in order to use updraft helicity in the response function.
 - `find_ESA_field_local_extrema.py`: Find local extrema (e.g., min or max) in fields output from the ESA program.
+- `plot_esa_fields.py`: Create 2D horizontal cross sections of fields output from the ESA program.
 
 For additional information regarding any of the utility programs, load the ESA program Python environment and run the following:
 
