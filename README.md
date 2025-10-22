@@ -6,7 +6,7 @@ Program for running Ensemble Sensitivity Analysis (ESA) in Python.
 
 - `main/`: Main code for computing ESA.
 - `util/`: Utilities that are separate from the ESA program (e.g., plotting scripts).
-- `tests/`: Automated unit tests as well as a simple test case.
+- `test/`: Automated unit tests as well as a simple test case.
 
 ## Quick Start Guide
 
@@ -22,16 +22,30 @@ conda env create -f environment.yml --prefix {ENV_PREFIX}
 conda activate {ENV_PREFIX}
 ```
 
-The program requires a single YAML input file. An example is provided here: `tests/sample.yml`. Assuming that the Python environment is configured correctly (see above), the test case can be run using the following command:
+The program requires a single YAML input file. An example is provided here: `test/sample.yml`. Assuming that the Python environment is configured correctly (see above), the test case can be run using the following command:
 
-`python run_esa.py ./tests/sample.yml`
+`python run_esa.py ./test/sample.yml`
 
 This test case uses the following inputs:
-- `tests/data/wrf/memXXX/wrfout.2009-04-15_20:45:00.TEST.nc`: Idealized WRF ensemble files used to determine the ensemble state.
-- `tests/data/wrf/memXXX/wrfout.2009-04-15_22:00:00.TEST.nc`: Idealized WRF ensemble files used to compute the response function.
+- `test/data/wrf/memXXX/wrfout.2009-04-15_20:45:00.TEST.nc`: Idealized WRF ensemble files used to determine the ensemble state.
+- `test/data/wrf/memXXX/wrfout.2009-04-15_22:00:00.TEST.nc`: Idealized WRF ensemble files used to compute the response function.
 
 If the program runs successfully, the following files will be created:
-- `test.nc`: ESA output file
+- `test/test_out.nc`: ESA output file
+
+## Utility Programs
+
+The `./util/` directory contains a number of independent programs that may be helpful for probing output from the main ESA program (`run_esa.py`). These include:
+
+- `plot_esa_fields.py`: Create 2D horizontal cross sections of fields output from the ESA program.
+- `find_ESA_field_local_extrema.py`: Find local extrema (e.g., min or max) in fields output from the ESA program.
+
+For additional information regarding any of the utility programs, load the ESA program Python environment and run the following:
+
+```
+cd ./util
+python <program name> -h
+```
 
 ## ESA Overview
 
