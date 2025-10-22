@@ -6,4 +6,4 @@
 __pycache__/
 
 # Ignore output from tests
-test.nc
+test/test_out.nc

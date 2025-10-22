@@ -33,4 +33,4 @@ var_diff:
 
 # Output options
 out:
-  nc_fname: test.nc
+  nc_fname: './test/test_out.nc'

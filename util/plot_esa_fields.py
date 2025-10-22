@@ -14,6 +14,7 @@ import argparse
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 #---------------------------------------------------------------------------------------------------
@@ -62,18 +63,39 @@ def parse_in_args(argv):
                         help='Option to hatch areas where pval < pval_thres. Set to -1 to not use.',
                         type=float)
     
+    parser.add_argument('--extrema_csv',
+                        dest='extrema_csv',
+                        default='none',
+                        help="CSV file containing extrema values to be plotted. Set to 'none' to not use.",
+                        type=str)
+    
     return parser.parse_args(argv)
+
+
+def read_extrema_csv(fname):
+    """
+    Read CSV holding extrema values
+    """
+
+    df = pd.read_csv(fname, skiprows=1)
+
+    return df
 
 
 def plot_cartesian(ds, param):
     """
     Plot ESA fields when horiz_coord is 'xy' or 'idx'
     """
-    
+   
+    # Read in CSV with extrema
+    if param.extrema_csv != 'none':
+        extrema_df = read_extrema_csv(param.extrema_csv)
+
+    # Make plot for each vertical level
     for k in range(ds[param.field].shape[0]):
     
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
-        plt.subplots_adjust(left=0.1, bottom=0, right=0.98, top=0.85)
+        plt.subplots_adjust(left=0.1, bottom=0, right=0.98, top=0.82)
         
         # Plot ESA-related field
         x = ds['x'][k, :, :].values
@@ -92,12 +114,20 @@ def plot_cartesian(ds, param):
             ax.contourf(x, y, pval, nlvl, colors='none', hatches=['\\\\', None])
             h_str = f"Hatching: ESA p-value < {param.pval_thres}"
         
+        # Add local extrema
+        e_str=''
+        if param.extrema_csv != 'none':
+            df = extrema_df.loc[extrema_df['i'] == k, ['x', 'y']]
+            if len(df) > 0:
+                ax.plot(df['x'], df['y'], c='c', marker='o', lw=0, ms=8)
+                e_str = "Cyan dots: Local extrema"
+
         # Add annotations
         ax.set_aspect('equal')
         z_str = f"avg z = {np.mean(ds['z'][k, :, :].values)}"
         state_str = f"state = {ds.attrs['state_description']}"
         resp_str = f"response = {ds.attrs['response_reduction']} {ds.attrs['response_description']}"
-        plt.suptitle(f"{state_str}, {z_str}\n{resp_str}\n{h_str}", size=16)
+        plt.suptitle(f"{state_str}, {z_str}\n{resp_str}\n{h_str}\n{e_str}", size=16)
         cbar = plt.colorbar(cax, ax=ax, orientation='horizontal', pad=0.075)
         cbar.set_label(param.field, size=12)
         
