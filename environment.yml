@@ -1,7 +1,6 @@
 name: my_py
 channels:
   - anaconda
-  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
@@ -22,11 +21,11 @@ dependencies:
   - brotli-python=1.1.0=py311hb755f60_1
   - bzip2=1.0.8=hd590300_5
   - c-ares=1.27.0=hd590300_0
-  - ca-certificates=2025.1.31=hbcca054_0
+  - ca-certificates=2025.10.5=hbd8a1cb_0
   - cached-property=1.5.2=py_0
   - cairo=1.16.0=ha61ee94_1014
   - cartopy=0.22.0=py311h320fe9a_1
-  - certifi=2025.1.31=pyhd8ed1ab_0
+  - certifi=2025.10.5=pyhd8ed1ab_0
   - cfitsio=4.2.0=hd9d235c_0
   - cftime=1.6.2=py311hbed6279_0
   - charset-normalizer=3.3.2=pyhd8ed1ab_0
@@ -77,6 +76,9 @@ dependencies:
   - heapdict=1.0.1=pyhd3eb1b0_0
   - icu=70.1=h27087fc_0
   - idna=3.6=pyhd8ed1ab_0
+  - imagecodecs-lite=2019.12.3=py311h18e1886_8
+  - imageio=2.37.0=pyhfb79c49_0
+  - importlib-metadata=8.7.0=pyhe01879c_1
   - iniconfig=2.0.0=pyhd8ed1ab_0
   - ipython=8.22.2=pyh707e725_0
   - jasper=2.0.33=h0ff4b12_1
@@ -91,6 +93,8 @@ dependencies:
   - kiwisolver=1.4.5=py311h9547e67_1
   - krb5=1.20.1=h81ceb04_0
   - lat_lon_parser=1.3.0=pyhd8ed1ab_0
+  - lazy-loader=0.4=pyhd8ed1ab_2
+  - lazy_loader=0.4=pyhd8ed1ab_2
   - lcms2=2.15=hfd0df8a_0
   - ld_impl_linux-64=2.40=h41732ed_0
   - lerc=4.0.0=h27087fc_0
@@ -148,6 +152,7 @@ dependencies:
   - munkres=1.1.4=pyh9f0ad1d_0
   - ncurses=6.4.20240210=h59595ed_0
   - netcdf4=1.6.3=nompi_py311ha396515_100
+  - networkx=3.5=pyhe01879c_0
   - nspr=4.35=h27087fc_0
   - nss=3.98=h1d7d5a4_0
   - numpy=1.26.4=py311h24aa872_0
@@ -193,10 +198,12 @@ dependencies:
   - python-tzdata=2024.1=pyhd8ed1ab_0
   - python_abi=3.11=4_cp311
   - pytz=2024.1=pyhd8ed1ab_0
+  - pywavelets=1.7.0=py311h07ce7c0_0
   - pyyaml=6.0.1=py311h5eee18b_0
   - readline=8.2=h8228510_1
   - requests=2.31.0=pyhd8ed1ab_0
   - s3fs=0.6.0=pyhd3eb1b0_0
+  - scikit-image=0.20.0=py311h2872171_1
   - scikit-learn=1.2.2=py311h6a678d5_1
   - scipy=1.12.0=py311h64a7726_2
   - seaborn=0.12.2=py311h06a4308_0
@@ -211,6 +218,7 @@ dependencies:
   - stack_data=0.6.2=pyhd8ed1ab_0
   - tblib=1.7.0=pyhd3eb1b0_0
   - threadpoolctl=2.2.0=pyh0d69192_0
+  - tifffile=2020.6.3=py_0
   - tiledb=2.13.2=hd532e3d_0
   - tk=8.6.13=noxft_h4845f30_101
   - tomli=2.0.1=pyhd8ed1ab_0
@@ -251,6 +259,7 @@ dependencies:
   - yaml=0.2.5=h7b6447c_0
   - yarl=1.9.3=py311h5eee18b_0
   - zict=3.0.0=py311h06a4308_0
+  - zipp=3.23.0=pyhd8ed1ab_0
   - zlib=1.2.13=hd590300_5
   - zstd=1.5.5=hfc55251_0
 prefix: /ncrc/home2/Shawn.S.Murdzek/.conda/envs/my_py
