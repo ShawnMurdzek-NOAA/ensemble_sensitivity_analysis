@@ -43,12 +43,6 @@ def parse_in_args(argv):
                         type=str)
 
     # Optional arguments
-    parser.add_argument('-o',
-                        dest='out_file',
-                        default='out.nc',
-                        help='Output netCDF file with updraft helicity',
-                        type=str)
-
     parser.add_argument('-n',
                         dest='name',
                         default='UH25',
