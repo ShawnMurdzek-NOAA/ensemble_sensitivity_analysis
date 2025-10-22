@@ -72,7 +72,7 @@ def compute_uh_field(fptr, param):
     uh = wrf.getvar(fptr, 'updraft_helicity', bottom=param.bottom, top=param.top)
     uh_nc = fptr.createVariable(param.name, 'f4', ('Time', 'south_north', 'west_east'))
     uh_nc.units = 'm2/s2'
-    uh_nc.long_name = f"{param.bottom:.1f} - {param.top:.1f} m updraft helicity"
+    uh_nc.description = f"{param.bottom:.1f} - {param.top:.1f} m updraft helicity"
     uh_nc[:] = uh.values[np.newaxis, :, :]
 
     return fptr
