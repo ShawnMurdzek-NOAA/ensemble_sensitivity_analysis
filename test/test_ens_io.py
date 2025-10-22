@@ -93,6 +93,7 @@ class TestEnsWRFIO():
         # Check other attributes
         assert ens_obj.Nens == len(sample_fnames[0])
         assert ens_obj.resp_meta['reduction'] == resp_param['reduction']
+        assert ens_obj.full_shape == state_ds1[state_param['var']].shape
         
         
     def test_read_ens_wrapper(self, sample_fnames):
@@ -175,6 +176,7 @@ class TestEnsWRFIO():
                                 state_param['zlim'][0]:(state_param['zlim'][-1]+1),
                                 state_param['ylim'][0]:(state_param['ylim'][-1]+1),
                                 state_param['xlim'][0]:(state_param['xlim'][-1]+1)].values
+        state_shape = state_T.shape
         state_T = np.ravel(state_T)
         
         resp_ds = xr.open_dataset(sample_fnames[1][0])
@@ -186,6 +188,9 @@ class TestEnsWRFIO():
         assert len(state_T) == ens_obj.Nx
         assert np.all(np.isclose(state_T, ens_obj.state[0, :]))
         assert np.isclose(resp, ens_obj.resp[0])
+
+        # Check that full_shape matches the shape of the subset
+        assert ens_obj.full_shape == state_shape 
         
 
 """

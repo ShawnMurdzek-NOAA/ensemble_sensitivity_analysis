@@ -76,10 +76,8 @@ def read_parse_wrf(state_fnames,
             # Determine length of each dimension
             if ndim == 2:
                 ny, nx = field.shape
-                full_shape = (1, ny, nx)
             elif ndim == 3:
                 nz, ny, nx = field.shape
-                full_shape = (nz, ny, nx)
             else:
                 raise ValueError(f"State field should be 2D or 3D (ndim = {ndim})")
             
@@ -148,6 +146,12 @@ def read_parse_wrf(state_fnames,
             
             # Turn state array and coordinates into 1D arrays
             else:
+                if len(field.shape) == 2:
+                    # field is 2D
+                    full_shape = (1, field.shape[0], field.shape[1])
+                else:
+                    # field is 3D
+                    full_shape = field.shape
                 y, z, x  = np.meshgrid(y, z, x)
                 x = np.ravel(x)
                 y = np.ravel(y)
