@@ -22,7 +22,7 @@ conda env create -f environment.yml --prefix {ENV_PREFIX}
 conda activate {ENV_PREFIX}
 ```
 
-The program requires a single YAML input file. An example is provided here: `test/sample.yml`. Assuming that the Python environment is configured correctly (see above), the test case can be run using the following command:
+The program requires a single YAML input file. An example is provided here: `test/sample.yml`, and a description of all possible options can be found here: [README_inputs.md](https://github.com/ShawnMurdzek-NOAA/ensemble_sensitivity_analysis/blob/main/README_inputs.md). Assuming that the Python environment is configured correctly (see above), the test case can be run using the following command:
 
 `python run_esa.py ./test/sample.yml`
 
