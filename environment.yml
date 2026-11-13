@@ -93,6 +93,7 @@ dependencies:
   - python-gil=3.14.10=h4df99d1_100
   - python-tzdata=2026.6=pyh5ded981_0
   - python_abi=3.14=9_cp314
+  - pyyaml=6.0.3=py314h26178bb_3
   - qhull=2020.2=h48a1422_6
   - readline=8.3=h8b90a29_1
   - s2n=1.7.6=h1b28cb6_0
@@ -109,6 +110,7 @@ dependencies:
   - xarray=2026.9.0=pyh5ded981_0
   - xorg-libxau=1.0.12=hb001647_2
   - xorg-libxdmcp=1.1.5=hb001647_2
+  - yaml=0.2.5=h74c22ad_3
   - zlib-ng=2.3.3=h31dac16_1
   - zstd=1.5.7=hf451053_7
 prefix: /Users/shawn.murdzek/miniforge3/envs/py3_14
