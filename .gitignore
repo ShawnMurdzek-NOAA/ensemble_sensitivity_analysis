@@ -7,3 +7,6 @@ __pycache__/
 
 # Ignore output from tests
 test/test_out.nc
+
+# Ignore vscode
+.vscode/

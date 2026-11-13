@@ -65,6 +65,7 @@ def read_parse_wrf(state_fnames,
     state_ls = []
     resp = np.zeros(len(resp_fnames))
     for i, (fnames, param) in enumerate(zip([resp_fnames, state_fnames], [resp_param, state_param])):
+
         for j, f in enumerate(fnames):
             ds = xr.open_dataset(f)
             
@@ -238,10 +239,18 @@ def check_read_parse_inputs(state_fnames, resp_fnames, state_param, resp_param):
     req_key_resp_param = ['var', 'reduction', 'subset']
     for k in req_key_state_param:
         if k not in state_param.keys():
-            raise ValueError(f"Key {k} is missing from state_param")
+            raise ValueError(f"Key {k} is missing from state_param (ens/state section of input YAML)")
     for k in req_key_resp_param:
         if k not in resp_param.keys():
-            raise ValueError(f"Key {k} is missing from resp_param")
+            raise ValueError(f"Key {k} is missing from resp_param (ens/response section of input YAML)")
+
+    # If subset = True, ensure that xlim, ylim, and zlim are specified
+    req_key_subset = ['xlim', 'ylim', 'zlim']
+    for param_type, param in zip(['state', 'response'], [state_param, resp_param]):
+        if param['subset']:
+            for k in req_key_subset:
+                    if k not in param.keys():
+                        raise ValueError(f"subset = True in {param_type}_param (ens/state section of input YAML), but {k} is missing")
             
     return None
 
