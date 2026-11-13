@@ -244,8 +244,8 @@ def check_read_parse_inputs(state_fnames, resp_fnames, state_param, resp_param):
         if k not in resp_param.keys():
             raise ValueError(f"Key {k} is missing from resp_param (ens/response section of input YAML)")
 
-    # If subset = True, ensure that xlim, ylim, and zlim are specified
-    req_key_subset = ['xlim', 'ylim', 'zlim']
+    # If subset = True, ensure that xlim and ylim are specified
+    req_key_subset = ['xlim', 'ylim']
     for param_type, param in zip(['state', 'response'], [state_param, resp_param]):
         if param['subset']:
             for k in req_key_subset:
